@@ -491,7 +491,7 @@ app.post('/api/tasks/complete', async (req, res) => {
             }
             console.log(updatedBalance.rows[0].balance);
             
-            // Commit the transaction
+            // Commit the 
             await client.query('COMMIT');
 
             // Respond with a success message and the updated balance
