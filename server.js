@@ -19,14 +19,13 @@ const __dirname = dirname(__filename);
 
 
 const pgSession = connectPgSimple(session);
-// PostgreSQL client configuration
 
 console.log(process.env.DATABASE_URL);
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // Use the environment variable for your connection string
     ssl: {
-        rejectUnauthorized: false, // Required for some hosted database services like Heroku
+        rejectUnauthorized: false, // Required for some
     },
 });
 pool.connect()
@@ -36,7 +35,7 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-const myApp ='https://pupss-1.onrender.com';
+const myApp ='https://8fe7-197-211-61-124.ngrok-free.app';
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from React's build folder
@@ -44,8 +43,10 @@ console.log(process.env.NODE_ENV)
 if(process.env.NODE_ENV ==='production'){
     app.use(express.static(join(__dirname, '/build')));
 }
+
+
 // app.use(cors({
-//     origin: '*', // Allow only requests from this frontend origin
+//     origin: '*', // Allow
 //     methods: ['GET', 'POST'],
 //     credentials: true // If you're sending cookies or authentication headers
 // }));
@@ -311,14 +312,14 @@ app.get('/get-balance/:username', async (req, res) => {
     const { username } = req.params;
 
     try {
-        const result = await pool.query('SELECT balance FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT balance,taplimit FROM users WHERE username = $1', [username]);
 
         if (result.rows.length > 0) {
             // User found, return balance
-            res.status(200).json({ balance: result.rows[0].balance,tapLimit: result.rows[0].taplimit });
-            console.log(result.rows[0].taplimit)
+            res.status(200).json({ balance: result.rows[0].balance , tapLimit: result.rows[0].taplimit});
+            console.log(result.rows[0].taplimit);
+            
         } else {
-            // User not found
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
@@ -327,23 +328,33 @@ app.get('/get-balance/:username', async (req, res) => {
         res.status(500).json({ message: 'Error fetching balance' });
     }
 });
-app.post('/update',async (req,res)=>{
-    const {username,balance,tapLimit}=req.body;
-    if(!username || balance === undefined || tapLimit === undefined){
-        return res.status(400).json({error:'Missing required fields'})
-    }
-    try {
-        const result= await pool.query(
-            'UPDATE users SET balance = $1, tapLimit=$2 WHERE username = $3',[balance,tapLimit,username]
 
-        )
-        if(result.rowCount >0){
-            return res.status(200).json({message:'Update Succesful'})
-        }else{
-            return res.status(404).json({error:'Internal Server Error'})
+app.post('/update', async (req, res) => {
+    const { username, balance, tapLimit } = req.body; // Extract data from the request body
+
+    // Validate the input
+    if (!username || balance === undefined || tapLimit === undefined) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    try {
+        // Execute the query to update the user's data
+        const result = await pool.query(
+            'UPDATE users SET balance = $1, taplimit = $2 WHERE username = $3',
+            [balance, tapLimit, username]
+        );
+
+        if (result.rowCount > 0) {
+            // If a row was updated, send a success response
+            return res.status(200).json({ message: 'Update successful' });
+        } else {
+            // If no rows were updated, the username might not exist
+            return res.status(404).json({ error: 'User not found' });
         }
     } catch (error) {
-        res.status(500).json({error:'Internal server error'})
+        // Handle any database or server errors
+        console.error('Error updating data:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -507,7 +518,6 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '/build', 'index.html'));
 });
 
-// Start the Express server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
