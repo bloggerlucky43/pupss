@@ -315,7 +315,8 @@ app.get('/get-balance/:username', async (req, res) => {
 
         if (result.rows.length > 0) {
             // User found, return balance
-            res.status(200).json({ balance: result.rows[0].balance });
+            res.status(200).json({ balance: result.rows[0].balance,tapLimit: result.rows[0].taplimit });
+            console.log(result.rows[0].taplimit)
         } else {
             // User not found
             res.status(404).json({ message: 'User not found' });
@@ -324,6 +325,25 @@ app.get('/get-balance/:username', async (req, res) => {
         console.error('Error fetching balance:', error);
         // Send a server error response in case of a database failure
         res.status(500).json({ message: 'Error fetching balance' });
+    }
+});
+app.post('/update',async (req,res)=>{
+    const {username,balance,tapLimit}=req.body;
+    if(!username || balance === undefined || tapLimit === undefined){
+        return res.status(400).json({error:'Missing required fields'})
+    }
+    try {
+        const result= await pool.query(
+            'UPDATE users SET balance = $1, tapLimit=$2 WHERE username = $3',[balance,tapLimit,username]
+
+        )
+        if(result.rowCount >0){
+            return res.status(200).json({message:'Update Succesful'})
+        }else{
+            return res.status(404).json({error:'Internal Server Error'})
+        }
+    } catch (error) {
+        res.status(500).json({error:'Internal server error'})
     }
 });
 
