@@ -4,7 +4,6 @@ import connectPgSimple from 'connect-pg-simple';
 import pkg from 'pg'; 
 import { Telegraf } from 'telegraf'; 
 import dotenv from 'dotenv';
-// import cors from 'cors';
 import session from 'express-session'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -19,7 +18,7 @@ const __dirname = dirname(__filename);
 
 
 const pgSession = connectPgSimple(session);
-// PostgreSQL client configuration
+
 
 console.log(process.env.DATABASE_URL);
 
