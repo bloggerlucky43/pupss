@@ -4,7 +4,7 @@ import connectPgSimple from 'connect-pg-simple';
 import pkg from 'pg'; 
 import { Telegraf } from 'telegraf'; 
 import dotenv from 'dotenv';
-import cors from 'cors';
+// import cors from 'cors';
 import session from 'express-session'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -36,7 +36,7 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-const myApp ='https://1feb-197-211-61-36.ngrok-free.app';
+const myApp ='https://pupss-1.onrender.com';
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from React's build folder
