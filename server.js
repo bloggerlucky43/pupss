@@ -35,7 +35,7 @@ pool.connect()
     .catch(err => {
         console.error('Database connection error:', err);
     });
-const myApp ='https://8fe7-197-211-61-124.ngrok-free.app';
+const myApp ='https://3a0c-197-211-61-123.ngrok-free.app';
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from React's build folder
@@ -60,15 +60,15 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        secure: false, // Set to true if using HTTPS
+        maxAge: 1 * 24 * 60 * 60 * 1000,
+        secure: true, // Set to true if using HTTPS
         sameSite: 'None',
     }}));
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API_KEY);
 bot.start((ctx) => {
     console.log('Received start command')
-    ctx.reply('Hey, Welcome PUPS 🐶 Invi', {
+    ctx.reply('Hey, Welcome PUPS 🐶 Invite your friend to earn more', {
         reply_markup: {
             inline_keyboard: [
                 [{ text: 'Launch', web_app: { url: `${myApp}/startapp` } }],
@@ -98,7 +98,7 @@ bot.launch()
 // Login and User Creation Endpoint
 app.post('/startapp', async (req, res) => {
   const { username, first_name, id, referrerId } = req.body;
-
+  
   if (!username || !first_name || !id) {
     return res.status(400).json({ error: 'All user data fields are required' });
   }
@@ -106,27 +106,37 @@ app.post('/startapp', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     let user = result.rows[0];
-
+    console.log("NOt present ",user);
+    
     if (user) {
       req.session.username = user.username;
-      console.log('User found, session started:', req.session.username);
       return res.json({ message: 'Login successful', user });
     } else {
+        // create new user
       const newUserResult = await pool.query(
         'INSERT INTO users (id, username, first_name, balance, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
         [id, username, first_name, 500]
       );
       const newUser = newUserResult.rows[0];
+      //Handle referral logic if referrerID is provided
+      console.log(referrerId);
       
       if (referrerId) {
         const referrerResult = await pool.query('SELECT * FROM users WHERE id = $1', [referrerId]);
         const referrer = referrerResult.rows[0];
-
+        console.log('these are the referral details',referrer);
+        
         if (referrer) {
+            //Create Referral Record
           await pool.query(
             'INSERT INTO referrals (referee_id, referrer_id, reward_given) VALUES ($1, $2, $3)',
-            [id, referrerId, false]
+            [id, referrerId, true]
           );
+          console.log('successful');
+          
+          //Update referrer Balance
+          await pool.query( 'UPDATE users SET balance = balance + 50 WHERE id=$1',[referrerId])
+          console.log('Referrer reward added for:', referrerId);
         } else {
           console.log('Invalid referrer ID');
         }
@@ -140,73 +150,6 @@ app.post('/startapp', async (req, res) => {
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'Server error' });
-  }
-});
-
-
-// Endpoint to fetch referrals for a given user (to show referred users)
-app.get('/generate-referral-link', async (req, res) => {
-  const { userId } = req.query;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-
-  try {
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const botUsername = 'YourBotUsername'; // Replace with your actual bot's username
-    const referralLink = `https://t.me/${botUsername}/botusername?login=${userId}`;
-
-    return res.json({ referralLink });
-  } catch (err) {
-    console.error('Error generating referral link:', err);
-    return res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.post('/api/referrals/reward', async (req, res) => {
-  const { referredId } = req.body;
-
-  if (!referredId) {
-    return res.status(400).json({ error: 'Referred ID is required' });
-  }
-
-  try {
-    const referral = await pool.query(
-      'SELECT referrer_id FROM referrals WHERE referee_id = $1 AND reward_given = FALSE',
-      [referredId]
-    );
-
-    if (referral.rows.length === 0) {
-      return res.status(400).json({ error: 'No pending referral reward found' });
-    }
-
-    const referrerId = referral.rows[0].referrer_id;
-    const rewardAmount = 50; // Adjust reward as needed
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      await client.query('UPDATE users SET balance = balance + $1 WHERE id = $2', [rewardAmount, referrerId]);
-      await client.query('UPDATE referrals SET reward_given = TRUE WHERE referee_id = $1', [referredId]);
-
-      await client.query('COMMIT');
-      res.json({ message: 'Referrer rewarded successfully' });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('Transaction error:', err);
-      res.status(500).json({ error: 'Failed to reward referrer' });
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.error('Error rewarding referrer:', err);
-    res.status(500).json({ error: 'Failed to reward referrer' });
   }
 });
 
